@@ -2,9 +2,10 @@
 
 import "dotenv/config";
 import { ParsingClient } from "sparql-http-client";
-import { getObject, saveObject } from "./lib/s3.js";
+import { getObject, getDataAsString, saveObject } from "./lib/s3.js";
 
-const currentDateTime = new Date().toISOString();
+const currentDateTime = new Date();
+const currentDateTimeStr = currentDateTime.toISOString();
 
 // Get the date 1 day ago (this is the default value if no date is provided)
 const yesterday = new Date(Date.now() - 1000 * 60 * 60 * 24);
@@ -13,6 +14,7 @@ const yesterdayStr = yesterday.toISOString();
 // S3 configuration
 const s3Enabled = process.env.S3_ENABLED === "true"; // Default to false
 const s3LastTimestampKey = process.env.S3_LAST_TIMESTAMP_KEY || "last_timestamp.txt";
+const s3SimpleDateWorkaroundKey = process.env.S3_SIMPLE_DATE_WORKAROUND_KEY || "simple_date_workaround.txt";
 
 // Cache entry name for unnamed cache entries ; it will be cleared if any of the named cache entries are cleared
 const cacheEndpoint = process.env.CACHE_ENDPOINT || "";
@@ -31,20 +33,27 @@ const sparqlPassword = process.env.SPARQL_PASSWORD || "";
 
 // Get the date to compare with
 let previousDateStr = process.env.DEFAULT_PREVIOUS_DATE || yesterdayStr; // 1 day ago
+let simpleDateData = {};
 if (s3Enabled) {
   try {
     const lastTimestamp = await getObject(s3LastTimestampKey);
-    let trimmed;
-    if (lastTimestamp.Body) {
-      const bodyAsString = await lastTimestamp.Body.transformToString();
-      trimmed = bodyAsString.trim();
-    }
-    if (trimmed) {
-      console.log(`Last timestamp found in S3: ${trimmed}`);
-      previousDateStr = trimmed;
+    const trimmedLastTimestamp = await getDataAsString(lastTimestamp.Body, true);
+    if (trimmedLastTimestamp) {
+      console.log(`Last timestamp found in S3: ${trimmedLastTimestamp}`);
+      previousDateStr = trimmedLastTimestamp;
     }
   } catch (error) {
     console.error(`Failed to get last timestamp from S3: ${error}`);
+  }
+
+  try {
+    const simpleDateObject = await getObject(s3SimpleDateWorkaroundKey);
+    const simpleDateDataTrimmed = await getDataAsString(simpleDateObject.Body, true);
+    simpleDateData = JSON.parse(simpleDateDataTrimmed);
+    console.log("Simple date workaround data found in S3:");
+    console.log(simpleDateData);
+  } catch (error) {
+    console.error(`Failed to get simple date workaround from S3: ${error}`);
   }
 }
 const previousDate = new Date(previousDateStr);
@@ -108,24 +117,68 @@ const modifiedCubes = await client.query.select(`
 
 const entriesToClear = new Set();
 
-console.log(`Checking for cubes modified after ${previousDate.toISOString()}:`);
+/**
+ * Add an entry to the list of entries to clear, and add the URL-encoded versions if needed.
+ * @param {string} entry The entry to add.
+ */
+const addEntryToClear = (entry) => {
+  entriesToClear.add(entry);
+  if (supportUrlEncoded === "true") {
+    entriesToClear.add(encodeURI(entry));
+    entriesToClear.add(encodeURIComponent(entry));
+  }
+};
+
+console.log(`\nChecking for cubes modified after ${previousDate.toISOString()}:`);
 for (const cube of modifiedCubes) {
+  const datasetValue = cube.dataset.value;
   const dateModified = cube.dateModified;
-  const modifiedDate = new Date(dateModified.value);
-  // const modifiedDateDataType = dateModified.datatype.value;
-  // const isDateTime = modifiedDateDataType.includes('dateTime');
+  let modifiedDate = new Date(dateModified.value);
+
+  // @ts-ignore (cause: types are broken --")
+  const modifiedDateDataType = dateModified.datatype.value;
+  const isDateTime = modifiedDateDataType.includes("dateTime");
+  if (!isDateTime) {
+    // Add 1d-1ms to the date if it's a date
+    modifiedDate = new Date(modifiedDate.getTime() + (1000 * 60 * 60 * 24 - 1));
+  }
 
   if (modifiedDate >= previousDate) {
-    entriesToClear.add(cube.dataset.value);
-    if (supportUrlEncoded === "true") {
-      entriesToClear.add(encodeURI(cube.dataset.value));
-      entriesToClear.add(encodeURIComponent(cube.dataset.value));
+    let toClear = false;
+    // If it is not a dateTime => it is a date
+    if (!isDateTime) {
+      // Case: it's the first time we saw this entry, and the modifiedDate is set in the future
+      if (!simpleDateData[datasetValue] && currentDateTime <= modifiedDate) {
+        simpleDateData[datasetValue] = currentDateTimeStr; // So that we know when we first cleared it
+        addEntryToClear(datasetValue);
+        toClear = true;
+      }
+
+      // Case: we already saw this entry in a past run, we clear it a second time and remove it from the list
+      if (currentDateTime > modifiedDate) {
+        if (simpleDateData[datasetValue]) {
+          delete simpleDateData[datasetValue];
+        }
+        addEntryToClear(datasetValue);
+        toClear = true;
+      }
+      // It is a dateTime
+    } else {
+      addEntryToClear(datasetValue);
+      toClear = true;
     }
-    entriesToClear.add(cacheDefaultEntryName);
-    console.log(`  - ${cube.dataset.value} was last modified on ${modifiedDate.toISOString()}`);
+    if (toClear) {
+      console.log(`  - ${datasetValue} was last modified on ${modifiedDate.toISOString()}`);
+    }
   }
 }
 
+// Handle the case where we clear the default cache key
+if (entriesToClear.size > 0) {
+  entriesToClear.add(cacheDefaultEntryName);
+}
+
+// Purge the cache entries that need to be cleared
 console.log(`\nFound ${entriesToClear.size} cache entries to clear:`);
 const entriesToClearArray = Array.from(entriesToClear);
 const promises = await Promise.allSettled(entriesToClearArray.map(async (entry) => {
@@ -146,7 +199,8 @@ const promises = await Promise.allSettled(entriesToClearArray.map(async (entry) 
 
 // Update the last timestamp in the S3 bucket
 if (s3Enabled) {
-  await saveObject(s3LastTimestampKey, currentDateTime, "text/plain");
+  await saveObject(s3LastTimestampKey, currentDateTimeStr, "text/plain");
+  await saveObject(s3SimpleDateWorkaroundKey, JSON.stringify(simpleDateData, null, 2), "application/json");
 }
 
 // Return the right status code
