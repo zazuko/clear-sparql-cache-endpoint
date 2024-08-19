@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node index.js"
   },
+  "license": "MIT",
   "dependencies": {
     "dotenv": "^16.4.5",
     "sparql-http-client": "^3.0.1"
