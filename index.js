@@ -1,9 +1,18 @@
+// @ts-check
+
 import "dotenv/config";
 import { ParsingClient } from "sparql-http-client";
+import { getObject, saveObject } from "./lib/s3.js";
+
+const currentDateTime = new Date().toISOString();
 
 // Get the date 1 day ago (this is the default value if no date is provided)
 const yesterday = new Date(Date.now() - 1000 * 60 * 60 * 24);
 const yesterdayStr = yesterday.toISOString();
+
+// S3 configuration
+const s3Enabled = process.env.S3_ENABLED === "true"; // Default to false
+const s3LastTimestampKey = process.env.S3_LAST_TIMESTAMP_KEY || "last_timestamp.txt";
 
 // Cache entry name for unnamed cache entries ; it will be cleared if any of the named cache entries are cleared
 const cacheEndpoint = process.env.CACHE_ENDPOINT || "";
@@ -21,7 +30,23 @@ const sparqlUsername = process.env.SPARQL_USERNAME || "";
 const sparqlPassword = process.env.SPARQL_PASSWORD || "";
 
 // Get the date to compare with
-const previousDateStr = process.env.DEFAULT_PREVIOUS_DATE || yesterdayStr; // 1 day ago
+let previousDateStr = process.env.DEFAULT_PREVIOUS_DATE || yesterdayStr; // 1 day ago
+if (s3Enabled) {
+  try {
+    const lastTimestamp = await getObject(s3LastTimestampKey);
+    let trimmed;
+    if (lastTimestamp.Body) {
+      const bodyAsString = await lastTimestamp.Body.transformToString();
+      trimmed = bodyAsString.trim();
+    }
+    if (trimmed) {
+      console.log(`Last timestamp found in S3: ${trimmed}`);
+      previousDateStr = trimmed;
+    }
+  } catch (error) {
+    console.error(`Failed to get last timestamp from S3: ${error}`);
+  }
+}
 const previousDate = new Date(previousDateStr);
 
 // Tell the user that some required environment variables are missing
@@ -118,6 +143,11 @@ const promises = await Promise.allSettled(entriesToClearArray.map(async (entry) 
     throw new Error(`Failed to clear cache entry ${entry}`);
   }
 }));
+
+// Update the last timestamp in the S3 bucket
+if (s3Enabled) {
+  await saveObject(s3LastTimestampKey, currentDateTime, "text/plain");
+}
 
 // Return the right status code
 const failedPromises = promises.filter((p) => p.status === "rejected");
