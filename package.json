@@ -5,15 +5,22 @@
   "type": "module",
   "entrypoint": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "release": "changeset tag"
   },
   "license": "MIT",
+  "author": "Zazuko GmbH",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zazuko/clear-sparql-cache-endpoint.git"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.633.0",
     "dotenv": "^16.4.5",
     "sparql-http-client": "^3.0.1"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.7",
     "@eslint/js": "^9.9.0",
     "@stylistic/eslint-plugin-js": "^2.6.4",
     "eslint": "^9.9.0",
