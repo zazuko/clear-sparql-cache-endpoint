@@ -25,3 +25,7 @@ npm run start # Start the script
 | **SPARQL_ENDPOINT_URL**  | The URL of the SPARQL endpoint                                            | `""`          |
 | SPARQL_USERNAME          | The username for the SPARQL endpoint                                      | `""`          |
 | SPARQL_PASSWORD          | The password for the SPARQL endpoint                                      | `""`          |
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
