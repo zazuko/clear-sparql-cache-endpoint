@@ -1,0 +1,20 @@
+{
+  "name": "clear-sparql-cache-endpoint",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "entrypoint": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "sparql-http-client": "^3.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@stylistic/eslint-plugin-js": "^2.6.4",
+    "eslint": "^9.9.0",
+    "globals": "^15.9.0"
+  }
+}
