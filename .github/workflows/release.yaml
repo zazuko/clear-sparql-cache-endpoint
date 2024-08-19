@@ -13,6 +13,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    permissions:
+      contents: write
+
     steps:
       # This allow GitHub Actions to trigger the jobs for tags if needed
       - name: Generate token
