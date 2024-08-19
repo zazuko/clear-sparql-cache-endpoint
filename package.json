@@ -9,6 +9,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.633.0",
     "dotenv": "^16.4.5",
     "sparql-http-client": "^3.0.1"
   },
