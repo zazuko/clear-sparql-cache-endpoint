@@ -7,7 +7,7 @@ You can take a look at our custom [varnish-post](https://github.com/zazuko/varni
 
 ```sh
 npm install # Install dependencies
-cp .env.example .env # Copy environment variables
+cp example.env .env # Copy environment variables file
 # Open your editor, and fill the environment variables in the `.env` file
 npm run start # Start the script
 ```
