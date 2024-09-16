@@ -88,7 +88,7 @@ const modifiedCubes = await client.query.select(`
   PREFIX schema: <http://schema.org/>
   PREFIX void:   <http://rdfs.org/ns/void#>
 
-  SELECT DISTINCT ?dataset (MAX(STR(?dateModified)) AS ?lastModified) WHERE {
+  SELECT DISTINCT ?dataset (MAX(xsd:dateTime(?dateModified)) AS ?lastModified) WHERE {
     # Get all cubes and datasets
     VALUES ?type { cube:Cube void:Dataset }
     ?entity a ?type .
@@ -138,12 +138,22 @@ console.log(`\nChecking for cubes modified after ${previousDate.toISOString()}:`
 for (const cube of modifiedCubes) {
   const datasetValue = cube.dataset.value;
   const dateModified = cube.lastModified;
+  if (!dateModified) {
+    console.log(`  - ${datasetValue} has no dateModified value, skipping…`);
+    continue;
+  }
   let modifiedDate = new Date(dateModified.value);
 
   // @ts-ignore (cause: types are broken --")
   const modifiedDateDataType = dateModified.datatype.value;
   const isDateTime = modifiedDateDataType.includes("dateTime");
   if (!isDateTime) {
+    console.log(`  - ${datasetValue} don't have a dateTime value, skipping…`);
+    continue;
+  }
+
+  // Check if it could be a dateTime generated from a date
+  if (modifiedDate.getHours() === 0 && modifiedDate.getMinutes() === 0 && modifiedDate.getSeconds() === 0) {
     // Add 1d-1ms to the date if it's a date
     modifiedDate = new Date(modifiedDate.getTime() + (1000 * 60 * 60 * 24 - 1));
   }
