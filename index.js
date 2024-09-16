@@ -83,36 +83,41 @@ const client = new ParsingClient(clientOptions);
 
 // Get all cubes and datasets and their versions that have been modified
 const modifiedCubes = await client.query.select(`
-  PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+  PREFIX xsd:    <http://www.w3.org/2001/XMLSchema#>
   PREFIX cube:   <https://cube.link/>
   PREFIX schema: <http://schema.org/>
-  PREFIX rdf:    <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
   PREFIX void:   <http://rdfs.org/ns/void#>
-  PREFIX dcat:   <http://www.w3.org/ns/dcat#>
 
-  SELECT DISTINCT ?dataset ?dateModified WHERE {
+  SELECT DISTINCT ?dataset (MAX(STR(?dateModified)) AS ?lastModified) WHERE {
+    # Get all cubes and datasets
+    VALUES ?type { cube:Cube void:Dataset }
+    ?entity a ?type .
+
+    # with their timestamp on dateModified
+    ?entity schema:dateModified ?dateModified.
+
+    # Get previous versions of the cube if such exist
+    OPTIONAL
     {
-      SELECT DISTINCT ?dataset WHERE {
-        # Get all cubes and datasets
-        VALUES ?type { cube:Cube void:Dataset }
-        ?entity a ?type .
+      # Other versions of the cube
+      ?entity ^schema:hasPart ?parent.
+      ?parent schema:hasPart ?previousInclCurrent.
 
-        # Get other versions of the cube if they exist
-        OPTIONAL {
-          ?entity ^schema:hasPart ?parent.
-          ?parent schema:hasPart ?version.
-        }
+      # Ensure other cube version is of same type
+      ?previousInclCurrent a ?type .
 
-        # Return versions else fallback to dataset
-        BIND(COALESCE(?version, ?entity) AS ?dataset)
-      }
+      # Ensure other cube version cube has "schema: dateModified"
+      ?previousInclCurrent schema:dateModified ?previousInclCurrentDateModified.
+
+      # Ensure previous or current version based on timestamp !!explicitly convert to datetime, in case mixed types occur!!
+      FILTER(xsd:dateTime(?previousInclCurrentDateModified) <= xsd:dateTime(?dateModified))
     }
 
-    # Make sure they have a dateModified field
-    ?dataset schema:dateModified ?dateModified.
+    # Return versions else fallback to dataset
+    BIND(COALESCE(?previousInclCurrent, ?entity) AS ?dataset)
   }
-
-  ORDER BY DESC(STR(?dateModified))
+  GROUP BY ?dataset
+  ORDER BY DESC(STR(?lastModified))
 `);
 
 const entriesToClear = new Set();
@@ -132,7 +137,7 @@ const addEntryToClear = (entry) => {
 console.log(`\nChecking for cubes modified after ${previousDate.toISOString()}:`);
 for (const cube of modifiedCubes) {
   const datasetValue = cube.dataset.value;
-  const dateModified = cube.dateModified;
+  const dateModified = cube.lastModified;
   let modifiedDate = new Date(dateModified.value);
 
   // @ts-ignore (cause: types are broken --")
