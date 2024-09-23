@@ -153,15 +153,16 @@ for (const cube of modifiedCubes) {
   }
 
   // Check if it could be a dateTime generated from a date
+  let convertedFromDate = false;
   if (modifiedDate.getHours() === 0 && modifiedDate.getMinutes() === 0 && modifiedDate.getSeconds() === 0) {
     // Add 1d-1ms to the date if it's a date
     modifiedDate = new Date(modifiedDate.getTime() + (1000 * 60 * 60 * 24 - 1));
+    convertedFromDate = true;
   }
 
   if (modifiedDate >= previousDate) {
     let toClear = false;
-    // If it is not a dateTime => it is a date
-    if (!isDateTime) {
+    if (convertedFromDate) {
       // Case: it's the first time we saw this entry, and the modifiedDate is set in the future
       if (!simpleDateData[datasetValue] && currentDateTime <= modifiedDate) {
         simpleDateData[datasetValue] = currentDateTimeStr; // So that we know when we first cleared it
