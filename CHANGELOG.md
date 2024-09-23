@@ -1,5 +1,11 @@
 # clear-sparql-cache-endpoint
 
+## 0.3.2
+
+### Patch Changes
+
+- bcdab75: Fix handling date data type.
+
 ## 0.3.1
 
 ### Patch Changes
