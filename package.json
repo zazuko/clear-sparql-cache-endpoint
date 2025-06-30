@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.839.0",
-    "dotenv": "^16.5.0",
+    "dotenv": "^17.0.0",
     "sparql-http-client": "^3.0.1"
   },
   "devDependencies": {

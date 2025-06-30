@@ -1,8 +1,10 @@
 // @ts-check
 
-import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ quiet: true });
+
 import { ParsingClient } from "sparql-http-client";
-import { getObject, getDataAsString, saveObject } from "./lib/s3.js";
+const { getObject, getDataAsString, saveObject } = await import("./lib/s3.js");
 
 const currentDateTime = new Date();
 const currentDateTimeStr = currentDateTime.toISOString();
