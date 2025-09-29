@@ -15,7 +15,7 @@
     "url": "https://github.com/zazuko/clear-sparql-cache-endpoint.git"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.893.0",
+    "@aws-sdk/client-s3": "^3.896.0",
     "dotenv": "^17.2.2",
     "sparql-http-client": "^3.0.1"
   },
