@@ -1,5 +1,11 @@
 # clear-sparql-cache-endpoint
 
+## 0.3.3
+
+### Patch Changes
+
+- 4db8e70: Upgrade base image to Node.js 24
+
 ## 0.3.2
 
 ### Patch Changes
