@@ -78,7 +78,9 @@ if (cacheEndpointUsername && cacheEndpointPassword) {
 // Create the SPARQL client
 const clientOptions = { endpointUrl: sparqlEndpointUrl };
 if (sparqlUsername && sparqlPassword) {
+  // @ts-ignore
   clientOptions.user = sparqlUsername;
+  // @ts-ignore
   clientOptions.password = sparqlPassword;
 }
 const client = new ParsingClient(clientOptions);
@@ -166,7 +168,9 @@ for (const cube of modifiedCubes) {
     let toClear = false;
     if (convertedFromDate) {
       // Case: it's the first time we saw this entry, and the modifiedDate is set in the future
+      // @ts-ignore
       if (!simpleDateData[datasetValue] && currentDateTime <= modifiedDate) {
+        // @ts-ignore
         simpleDateData[datasetValue] = currentDateTimeStr; // So that we know when we first cleared it
         addEntryToClear(datasetValue);
         toClear = true;
@@ -174,7 +178,9 @@ for (const cube of modifiedCubes) {
 
       // Case: we already saw this entry in a past run, we clear it a second time and remove it from the list
       if (currentDateTime > modifiedDate) {
+        // @ts-ignore
         if (simpleDateData[datasetValue]) {
+          // @ts-ignore
           delete simpleDateData[datasetValue];
         }
         addEntryToClear(datasetValue);
