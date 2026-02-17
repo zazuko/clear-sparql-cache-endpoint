@@ -1,6 +1,6 @@
 {
   "name": "clear-sparql-cache-endpoint",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "type": "module",
   "entrypoint": "index.js",

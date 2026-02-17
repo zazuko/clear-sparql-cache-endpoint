@@ -1,5 +1,11 @@
 # clear-sparql-cache-endpoint
 
+## 0.3.4
+
+### Patch Changes
+
+- f4b7146: Upgrade various dependencies
+
 ## 0.3.3
 
 ### Patch Changes
