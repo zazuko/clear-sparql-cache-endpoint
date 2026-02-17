@@ -1,15 +1,15 @@
 import globals from "globals";
 import pluginJs from "@eslint/js";
-import stylisticJs from "@stylistic/eslint-plugin-js";
+import stylistic from "@stylistic/eslint-plugin";
 
 export default [
   pluginJs.configs.recommended,
   {
-    plugins: { "@stylistic/js": stylisticJs },
+    plugins: { "@stylistic": stylistic },
     rules: {
-      "@stylistic/js/quotes": ["error", "double"],
-      "@stylistic/js/semi": ["error", "always"],
-      "@stylistic/js/no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 0 }]
+      "@stylistic/quotes": ["error", "double"],
+      "@stylistic/semi": ["error", "always"],
+      "@stylistic/no-multiple-empty-lines": ["error", { "max": 2, "maxEOF": 0 }]
     },
     languageOptions: { globals: globals.node }
   },
