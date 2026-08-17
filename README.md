@@ -45,6 +45,34 @@ Using S3 allows us to trick a bit for the cases where `dateModified` returned by
 The trick makes sure that the cache is invalidated for this entry only the first time, and the day after the `dateModified` date.
 Without this trick, the cache would be invalidated every time the script runs until the day after its value.
 
+## Tests
+
+The tests run the script for real against the services in [`compose.yaml`](./compose.yaml), so Docker needs to be running:
+
+```sh
+npm run test:services # Start the services and wait for them to be ready
+npm test              # Run the tests
+docker compose down -v # Stop the services once you are done
+```
+
+| Service        | Image                            | Role                                                                                       |
+| -------------- | -------------------------------- | ------------------------------------------------------------------------------------------ |
+| `oxigraph`     | `ghcr.io/oxigraph/oxigraph`      | The SPARQL endpoint the script queries. Its store lives in a tmpfs and starts empty.        |
+| `sparql-proxy` | `node` + [`test/fixtures/xkey-proxy.js`](./test/fixtures/xkey-proxy.js) | Tags every response with the IRIs the query mentions, so that Varnish has something to purge. |
+| `varnish`      | `ghcr.io/zazuko/varnish-post`    | The cache the script clears.                                                                 |
+| `minio`        | `minio/minio`                    | The S3 implementation the state files are written to.                                        |
+
+The `sparql-proxy` service stands in for the production SPARQL proxy: Varnish can only invalidate by `xkey` if the backend tags its responses with one, and Oxigraph does not do that on its own. Responses that mention no dataset are tagged with the default entry name instead.
+
+If the default ports are taken on your machine, set `OXIGRAPH_PORT`, `VARNISH_PORT` or `MINIO_PORT` — the tests read the same variables:
+
+```sh
+VARNISH_PORT=9090 docker compose up -d --wait
+VARNISH_PORT=9090 npm test
+```
+
+The tests run the script from an empty working directory, so your own `.env` file is never picked up, and with `TZ=UTC`, because the detection of a `dateModified` that is really a date rather than a timestamp depends on the local timezone.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.

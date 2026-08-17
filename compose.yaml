@@ -1,0 +1,79 @@
+name: clear-sparql-cache-endpoint
+
+services:
+  # SPARQL endpoint the script queries for modified cubes and datasets.
+  # The store is kept in a tmpfs so that every `docker compose up` starts empty.
+  oxigraph:
+    image: ghcr.io/oxigraph/oxigraph:0.5.9
+    command: ["serve", "--location", "/data", "--bind", "0.0.0.0:7878"]
+    ports:
+      - "${OXIGRAPH_PORT:-7878}:7878"
+    tmpfs:
+      - /data
+
+  # Stands in for the SPARQL proxy that sits between Varnish and the store in
+  # production: it forwards requests to Oxigraph and tags every response with
+  # the IRIs mentioned in the query, so that Varnish can invalidate them by
+  # xkey. Without such a backend, Varnish has no tags to purge.
+  sparql-proxy:
+    image: node:24-alpine
+    working_dir: /app
+    command: ["node", "xkey-proxy.js"]
+    environment:
+      UPSTREAM_URL: http://oxigraph:7878
+      PORT: "3000"
+    volumes:
+      - ./test/fixtures/xkey-proxy.js:/app/xkey-proxy.js:ro
+    depends_on:
+      - oxigraph
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://localhost:3000/query?query=ASK%20%7B%7D').then((r) => process.exit(r.ok ? 0 : 1), () => process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  # The cache this project clears. PURGE_ACL is opened up because the tests
+  # purge from the host, not from inside the Compose network.
+  varnish:
+    image: ghcr.io/zazuko/varnish-post:latest
+    ports:
+      - "${VARNISH_PORT:-8088}:80"
+    environment:
+      BACKEND_HOST: sparql-proxy
+      BACKEND_PORT: "3000"
+      PURGE_ACL: 0.0.0.0/0
+      CACHE_TTL: 3600s
+      ENABLE_LOGS: "false"
+    depends_on:
+      sparql-proxy:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost/query?query=ASK%20%7B%7D"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # S3 implementation used for the last timestamp and simple date workaround
+  # state files.
+  minio:
+    image: minio/minio:latest
+    command: ["server", "/data"]
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+    environment:
+      MINIO_ROOT_USER: admin
+      MINIO_ROOT_PASSWORD: thisisasecret
+    tmpfs:
+      - /data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 5s
+      retries: 30

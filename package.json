@@ -6,6 +6,8 @@
   "entrypoint": "index.js",
   "scripts": {
     "start": "node index.js",
+    "test": "node --test --test-concurrency=1 --test-reporter=spec 'test/*.test.js'",
+    "test:services": "docker compose up -d --wait",
     "release": "changeset git-tag"
   },
   "license": "MIT",
