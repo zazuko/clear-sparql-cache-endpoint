@@ -1,5 +1,11 @@
 # clear-sparql-cache-endpoint
 
+## 0.3.5
+
+### Patch Changes
+
+- c230823: Upgrade dependencies and GitHub Actions, including Changesets v3
+
 ## 0.3.4
 
 ### Patch Changes
