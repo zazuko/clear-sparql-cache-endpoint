@@ -1,6 +1,6 @@
 // @ts-check
 
-// The S3 helpers in lib/s3.js, against MinIO.
+// The S3 helpers in lib/s3.js, against the S3 service from compose.yaml.
 
 import assert from "node:assert/strict";
 import { before, beforeEach, describe, it } from "node:test";

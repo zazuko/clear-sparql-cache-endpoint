@@ -34,8 +34,8 @@ jobs:
       - name: Lint
         run: npx eslint .
 
-      # Oxigraph, the xkey tagging proxy, varnish-post and MinIO. The tests talk
-      # to all four over their published ports.
+      # Oxigraph, the xkey tagging proxy, varnish-post and S3Mock. The tests
+      # talk to all four over their published ports.
       - name: Start services
         run: docker compose up -d --wait
 

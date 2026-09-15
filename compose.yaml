@@ -61,19 +61,13 @@ services:
       retries: 30
 
   # S3 implementation used for the last timestamp and simple date workaround
-  # state files.
-  minio:
-    image: minio/minio:latest
-    command: ["server", "/data"]
+  # state files. S3Mock is a test double rather than an object store: it holds
+  # everything under a temporary directory it throws away, and accepts any
+  # credentials. It has no shell, so readiness is polled from the test process
+  # rather than by a Compose healthcheck.
+  s3:
+    image: adobe/s3mock:5.2.2
     ports:
-      - "${MINIO_PORT:-9000}:9000"
+      - "${S3_PORT:-9000}:9090"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: thisisasecret
-    tmpfs:
-      - /data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 2s
-      timeout: 5s
-      retries: 30
+      retainFilesOnExit: "false"

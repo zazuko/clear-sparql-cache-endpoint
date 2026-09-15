@@ -34,20 +34,20 @@ const localhost = (portVariable, fallback) =>
 
 export const oxigraphUrl = localhost("OXIGRAPH_PORT", "7878");
 export const varnishUrl = localhost("VARNISH_PORT", "8088");
-export const minioUrl = localhost("MINIO_PORT", "9000");
+export const s3Url = localhost("S3_PORT", "9000");
 
 export const s3Bucket = "clear-sparql-cache-test";
 export const lastTimestampKey = "last_timestamp.txt";
 export const simpleDateKey = "simple_date_workaround.txt";
 
-/** Environment variables pointing the script at MinIO. */
+/** Environment variables pointing the script at the S3 service. */
 export const s3Env = {
   S3_ENABLED: "true",
   S3_BUCKET: s3Bucket,
   S3_ACCESS_KEY_ID: "admin",
   S3_SECRET_ACCESS_KEY: "thisisasecret",
   S3_REGION: "default",
-  S3_ENDPOINT: minioUrl,
+  S3_ENDPOINT: s3Url,
   S3_SSL_ENABLED: "false",
   S3_FORCE_PATH_STYLE: "true",
 };
@@ -59,7 +59,7 @@ export const s3Client = new S3Client({
     secretAccessKey: s3Env.S3_SECRET_ACCESS_KEY,
   },
   region: s3Env.S3_REGION,
-  endpoint: minioUrl,
+  endpoint: s3Url,
   tls: false,
   forcePathStyle: true,
 });
@@ -101,7 +101,7 @@ const waitFor = async (name, url, timeoutMs = 60 * 1000) => {
 export const waitForServices = async () => {
   await waitFor("Oxigraph", `${oxigraphUrl}/query?query=ASK%20%7B%7D`);
   await waitFor("Varnish", `${varnishUrl}/query?query=ASK%20%7B%7D`);
-  await waitFor("MinIO", `${minioUrl}/minio/health/live`);
+  await waitFor("S3Mock", `${s3Url}/`);
 
   try {
     await s3Client.send(new CreateBucketCommand({ Bucket: s3Bucket }));

@@ -60,11 +60,13 @@ docker compose down -v # Stop the services once you are done
 | `oxigraph`     | `ghcr.io/oxigraph/oxigraph`      | The SPARQL endpoint the script queries. Its store lives in a tmpfs and starts empty.        |
 | `sparql-proxy` | `node` + [`test/fixtures/xkey-proxy.js`](./test/fixtures/xkey-proxy.js) | Tags every response with the IRIs the query mentions, so that Varnish has something to purge. |
 | `varnish`      | `ghcr.io/zazuko/varnish-post`    | The cache the script clears.                                                                 |
-| `minio`        | `minio/minio`                    | The S3 implementation the state files are written to.                                        |
+| `s3`           | `adobe/s3mock`                   | The S3 implementation the state files are written to.                                        |
 
 The `sparql-proxy` service stands in for the production SPARQL proxy: Varnish can only invalidate by `xkey` if the backend tags its responses with one, and Oxigraph does not do that on its own. Responses that mention no dataset are tagged with the default entry name instead.
 
-If the default ports are taken on your machine, set `OXIGRAPH_PORT`, `VARNISH_PORT` or `MINIO_PORT` — the tests read the same variables:
+The `s3` service is [S3Mock](https://github.com/adobe/S3Mock), a test double rather than an object store: it accepts any credentials and throws its data away when it stops. The script only ever reads and writes two small objects, so nothing here depends on a real S3 implementation.
+
+If the default ports are taken on your machine, set `OXIGRAPH_PORT`, `VARNISH_PORT` or `S3_PORT` — the tests read the same variables:
 
 ```sh
 VARNISH_PORT=9090 docker compose up -d --wait
